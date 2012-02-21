@@ -1,6 +1,6 @@
 
 
-public class SHTTPConstants {
+public class Constants {
 
 	public final static String M_GET = "GET";
 	public final static String HTTP_VER = "HTTP/1.0";

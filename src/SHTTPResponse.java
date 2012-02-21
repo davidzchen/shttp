@@ -1,5 +1,7 @@
 import java.io.*;
 import java.util.*;
+import java.net.*;
+import java.nio.ByteBuffer;
 
 public class SHTTPResponse {
 
@@ -12,40 +14,68 @@ public class SHTTPResponse {
 
 	private int _totalBytes;
 
-	public SHTTPResponse(BufferedReader in)
-		throws UnsupportedEncodingException
+	public static int getTotalBytesRead(BufferedReader in)
+		throws IOException
 	{
-		byte[] bytes;
 		int bytesRead = 0;
+		String line;
 
-		bytes = in.readLine().getBytes();
-		_statusCode = Arrays.copyOfRange(bytes, 9, 12);
-		_message = new String(Arrays.copyOfRange(bytes, 13, bytes.length),
-			"US-ASCII");
-		bytesRead += bytes.length + 1;
+		while ((line = in.readLine()) != null) {
+			bytesRead += line.length() + 2;
+		}
 
-		bytes = in.readLine().getBytes();
-		_date = new String(Arrays.copyOfRange(bytes, 6, bytes.length),
-			"US-ASCII");
-		bytesRead += bytes.length + 1;
+		return bytesRead;
+	}
 
-		bytes = in.readLine().getBytes();
-		_serverName = new String(Arrays.copyOfRange(bytes, 8, bytes.length),
-			"US-ASCII");
-		bytesRead += bytes.length + 1;
+	public SHTTPResponse(BufferedReader in)
+		throws UnsupportedEncodingException, IOException
+	{
+		int bytesRead = 0;
+		String line;
 
-		bytes = in.readLine().getBytes();
-		_contentType = new String(Arrays.copyOfRange(bytes, 14, bytes.length),
-			"US-ASCII");
-		bytesRead += bytes.length + 1;
+		line = in.readLine();
+		String[] statusLine = line.split("\\s");
+		if (statusLine.length < 3) {
+			throw new IOException("Status line invalid");
+		}
+		_statusCode = Integer.parseInt(statusLine[1]);
+		_message = statusLine[2];
+		bytesRead += line.length() + 2;
 
-		bytes = in.readLine.getBytes();
-		_contentLength = Integer.parseInt(Arrays.copyOfRange(bytes,
-			16, bytes.length));
-		bytesRead += bytes.length + 1;
+		line = in.readLine();
+		String[] dateLine = line.split("\\s");
+		if (dateLine.length < 2) {
+			throw new IOException("Date line invalid");
+		}
+		_date = dateLine[1];
+		bytesRead += line.length() + 2;
 
-		/* Adjust for CRLF */
-		bytesRead += 2;
+		line = in.readLine();
+		String[] serverLine = line.split("\\s");
+		if (serverLine.length < 2) {
+			throw new IOException("Server line invalid");
+		}
+		_serverName = serverLine[1];
+		bytesRead += line.length() + 2;
+
+		line = in.readLine();
+		String[] contentTypeLine = line.split("\\s");
+		if (contentTypeLine.length < 2) {
+			throw new IOException("Content-type line invalid");
+		}
+		_contentType = contentTypeLine[1];
+		bytesRead += line.length() + 2;
+
+		line = in.readLine();
+		String[] contentLengthLine = line.split("\\s");
+		if (contentLengthLine.length < 2) {
+			throw new IOException("Content-length line invalid");
+		}
+		System.out.println(line);
+		System.out.println("(" + contentLengthLine[1] + ")");
+		_contentLength = Integer.parseInt(contentLengthLine[1]);
+		bytesRead += line.length() + 2;
+		bytesRead += _contentLength + 2;
 
 		_totalBytes = bytesRead + _contentLength;
 	}

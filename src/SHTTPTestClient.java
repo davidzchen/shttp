@@ -10,14 +10,21 @@ public class SHTTPTestClient extends Thread {
 	public static String _filename;
 	public static int _time;
 	public static String[] _files;
-	public static boolean _clientRunning;
+	public static long _clientEndTime;
+
+	public static SHTTPTestClientStats _clientStats;
 
 	/* Private variables for threads */	
 	private InetAddress __serverIPAddress;
 	private int __serverPort;
-	private int __filesDownloaded;
-	private int __filesRequested;
-	private long __bytesDownloaded;
+
+	public static void incrFilesDownloadedCallback(int bytesDownloaded)
+	{
+		synchronized (_clientStats) {
+			_clientStats.filesDownloaded++;
+			_clientStats.bytesDownloaded += bytesDownloaded;
+		}
+	}
 
 	public SHTTPTestClient(InetAddress serverIPAddress, int serverPort)
 	{
@@ -25,65 +32,68 @@ public class SHTTPTestClient extends Thread {
 
 		__serverIPAddress = serverIPAddress;
 		__serverPort      = serverPort;
-		__filesDownloaded = 0;
-		__filesRequested  = 0;
-		__bytesDownloaded = 0;
 	}
 
 	public void run()
 	{
+runloop:
 		while (true) {
-
 			for (String file : _files) {
-				if (_clientRunning == false) {
-					// Callback
-				}
 
-				Socket clientSocket = new Socket(__serverIPAddress, 
-					__serverPort);
-			
-				SHTTPRequest request;
+				long currTime = System.currentTimeMillis();
+				if (currTime > _clientEndTime)
+					break runloop;
+
+				Socket clientSocket;
 				try {
-					request = new SHTTPRequest(file);
-				} catch (Exception e) {
-					System.err.println("Cannot create request: " + 
-						e.getMessage());
+					clientSocket = new Socket(__serverIPAddress, 
+						__serverPort);
+				} catch (IOException ioe) {
+					System.out.println("Cannot create socket to server: " +
+						ioe.getMessage());
 					continue;
 				}
-				__filesRequested++;
+
+				try {
+					clientSocket.setSoTimeout((int) (_clientEndTime - currTime));
+				} catch (SocketException se) {
+					System.out.println("Cannot set socket timeout to " +
+						(_clientEndTime - currTime) + ": " + se.getMessage());
+					continue;
+				}
+			
+				SHTTPRequest request = new SHTTPRequest(file);
 
 				DataOutputStream outToServer;
-				
 				try {
 					outToServer = new DataOutputStream(
 						clientSocket.getOutputStream());
-					outToServer.writeBytes(request.getBytes());
-				} catch (Exception e) {
-					System.err.println("Cannot write to server: " +
-						e.getMessage());
+					outToServer.writeBytes(request.getString());
+				} catch (IOException ie) {
+					System.out.println("Error opening output stream to server: " +
+						ie.getMessage());
 					continue;
 				}
 
 				BufferedReader inFromServer;
-				SHTTPResponse response;
-				try {
-					inFromServer = new BufferedReader(
-						new InputStreamReader(clientSocket.getInputStream()));
-					response = new SHTTPResponse(inFromServer);
-				} catch (UnsupportedEncondingException uee) {
-					System.err.println("Unsupported encoding for response: " +
-						uee.getMessage());
-					continue;
-				} catch (Exception e) {
-					System.err.println("Cannot read response from server: " +
-						e.getMessage());
+				int bytesRead;
+				try {	
+					inFromServer = new BufferedReader(new InputStreamReader(
+						clientSocket.getInputStream(), "US-ASCII"));
+					bytesRead = SHTTPResponse.getTotalBytesRead(inFromServer);
+				} catch (IOException ie) {
+					//System.out.println("Error reading from server: " + 
+					//	ie.getMessage());
 					continue;
 				}
 
-				__filesDownloaded++;
-				__bytesDownloaded += response.getBytesRead();
+				SHTTPTestClient.incrFilesDownloadedCallback(bytesRead);
 
-				clientSocket.close();
+				try {
+					clientSocket.close();
+				} catch (IOException ie) {
+
+				}
 			}
 		}
 	}
@@ -98,7 +108,7 @@ public class SHTTPTestClient extends Thread {
 
 	private static void _parseOptions(String[] args)
 	{
-		if (args != 10) {
+		if (args.length != 10) {
 			_usage();
 			System.exit(1);
 		}
@@ -139,7 +149,7 @@ public class SHTTPTestClient extends Thread {
 		while ((line = br.readLine()) != null)
 			files.add(line);
 		
-		_files = files.toArray();
+		_files = files.toArray(new String[files.size()]);
 
 		in.close();
 	}
@@ -147,6 +157,7 @@ public class SHTTPTestClient extends Thread {
 	public static void main(String[] args)
 	{
 		_parseOptions(args);
+		_clientStats = new SHTTPTestClientStats();
 
 		try {
 			_readFile();
@@ -156,7 +167,7 @@ public class SHTTPTestClient extends Thread {
 			System.exit(2);
 		}
 
-		InetAddress serverIPAddress;
+		InetAddress serverIPAddress = null;
 		try {
 			serverIPAddress = InetAddress.getByName(_server);
 		} catch (UnknownHostException uhe) {
@@ -167,11 +178,23 @@ public class SHTTPTestClient extends Thread {
 			System.exit(3);
 		}
 
-		_clientRunning = true;
+		Thread[] threads = new Thread[_threads];
+
+		_clientEndTime = System.currentTimeMillis() + (_time * 1000);
 		for (int i = 0; i < _threads; i++) {
-			new SHTTPTestClient(serverIPAddress, _port).start();
+			threads[i] = new SHTTPTestClient(serverIPAddress, _port);
+			threads[i].start();
 		}
-		Thread.sleep(_time * 1000);
-		_clientRunning = false;
+		try {
+			Thread.sleep(_time * 1000);
+		} catch (InterruptedException ie) {
+			System.err.println("Main thread interrupted: " + ie.getMessage());
+			System.exit(5);
+		}
+
+		System.out.println("Total files downloaded: " + 
+			_clientStats.filesDownloaded);
+		System.out.println("Total bytes downloaded: " +
+			_clientStats.bytesDownloaded);
 	}
 }
