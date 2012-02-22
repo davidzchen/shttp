@@ -8,4 +8,5 @@ public class Constants {
 	public final static byte B_SPACE = 0x20;
 	public final static byte B_CR    = 0x0D;
 	public final static byte B_LF    = 0x0A;
+
 }
