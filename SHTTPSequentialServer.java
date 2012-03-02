@@ -2,17 +2,23 @@ import java.io.*;
 import java.util.*;
 import java.net.*;
 
-class SHTTPSequentialServer {
+class SHTTPSequentialServer implements ISHTTPSyncServer {
 
 	private ServerSocket _listenSocket;
 	private ServerConfig _config;
+	private ServerCache  _serverCache;
 
 	public SHTTPSequentialServer(ServerConfig config)
 		throws IOException
 	{
 		_config = config;
 		_listenSocket = new ServerSocket(_config.listenPort());
-		_config.print();
+		_serverCache = new ServerCache(_config.cacheSize());
+	}
+
+	public boolean loadAvailable()
+	{
+		return true;	
 	}
 
 	public void run()
@@ -23,17 +29,29 @@ class SHTTPSequentialServer {
 			try {
 				connectionSocket = _listenSocket.accept();
 			} catch (IOException ie) {
-				System.err.println("Cannot accept connection: " +
+				System.err.println("Cannot accept connection: " + 
 					ie.getMessage());
 				continue;
 			}
-			System.out.println("Receiving request from " + connectionSocket);
+			Debug.DEBUG("Receiving request from " + connectionSocket);
 
-			WebRequestHandler requestHandler = new WebRequestHandler(
-				connectionSocket, _config.documentRoot());
+			WebRequestHandler requestHandler;
+			try {
+				requestHandler = new WebRequestHandler(connectionSocket, 
+					_config.documentRoot(), _serverCache, this);
+			} catch (IOException ie) {
+				System.err.println("Cannot create request handler: " +
+					ie.getMessage());
+				continue;
+			}
 			requestHandler.processRequest();
 
-			connectionSocket.close();
+			try {
+				connectionSocket.close();
+			} catch (IOException ie) {
+				Debug.WARN("Error closing connection socket: " +
+					ie.getMessage());
+			}
 		}
 	}
 

@@ -2,10 +2,13 @@ import java.io.*;
 import java.util.*;
 import java.net.*;
 
-class SHTTPBusyWaitServer {
+class SHTTPBusyWaitServer implements ISHTTPSyncServer {
+
+	private static final int SERVER_LOAD_THRESHOLD = 20;
 
 	private ServerSocket _listenSocket;
 	private ServerConfig _config;
+	private ServerCache _serverCache;
 	private List<Socket> _connectionSocketPool;
 	private SHTTPBusyWaitThread[] _threads;
 
@@ -14,16 +17,27 @@ class SHTTPBusyWaitServer {
 	{
 		_config = config;
 		_listenSocket = new ServerSocket(_config.listenPort());
-		_config.print();
+		_serverCache = new ServerCache(_config.cacheSize());
 
 		_connectionSocketPool = new Vector<Socket>();
 		_threads = new SHTTPBusyWaitThread[_config.threadPoolSize()];
 
 		for (int i = 0; i < _threads.length; i++) {
-			_threads[i] = new SHTTPBusyWaitServer(_connectionSocketPool,
-				_config.documentRoot());
+			_threads[i] = new SHTTPBusyWaitThread(_connectionSocketPool,
+				_config.documentRoot(), _serverCache, this);
 			_threads[i].start();
 		}
+	}
+
+	public boolean loadAvailable()
+	{
+		int size;
+
+		synchronized (_connectionSocketPool) {
+			size = _connectionSocketPool.size();
+		}
+
+		return (size < SERVER_LOAD_THRESHOLD);
 	}
 
 	public void run()
@@ -83,4 +97,5 @@ class SHTTPBusyWaitServer {
 			System.exit(2);
 		}
 		server.run();
+	}
 }

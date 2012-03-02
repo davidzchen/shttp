@@ -2,10 +2,13 @@ import java.io.*;
 import java.util.*;
 import java.net.*;
 
-class SHTTPSuspensionServer {
+public class SHTTPSuspensionServer implements ISHTTPSyncServer {
+
+	private static final int SERVER_LOAD_THRESHOLD = 20;
 
 	private ServerSocket _listenSocket;
 	private ServerConfig _config;
+	private ServerCache _serverCache;
 	private List<Socket> _connectionSocketPool;
 	private SHTTPSuspensionThread[] _threads;
 
@@ -14,16 +17,27 @@ class SHTTPSuspensionServer {
 	{
 		_config = config;
 		_listenSocket = new ServerSocket(_config.listenPort());
-		_config.print();
+		_serverCache = new ServerCache(_config.cacheSize());
 
 		_connectionSocketPool = new Vector<Socket>();
-		_threads = new ServiceThread[_config.threadPoolSize()];
+		_threads = new SHTTPSuspensionThread[_config.threadPoolSize()];
 
 		for (int i = 0; i < _threads.length; i++) {
 			_threads[i] = new SHTTPSuspensionThread(_connectionSocketPool,
-				_config.documentRoot());
+				_config.documentRoot(), _serverCache, this);
 			_threads[i].start();
 		}
+	}
+
+	public boolean loadAvailable()
+	{
+		int size;
+
+		synchronized (_connectionSocketPool) {
+			size = _connectionSocketPool.size();
+		}
+
+		return (size < SERVER_LOAD_THRESHOLD);
 	}
 
 	public void run()
@@ -32,7 +46,7 @@ class SHTTPSuspensionServer {
 			Socket connectionSocket = null;
 			
 			try {
-				connectionSocket = welcomeSocket.accept();
+				connectionSocket = _listenSocket.accept();
 			} catch (IOException ie) {
 				System.err.println("Cannot receive connection: " +
 					ie.getMessage());
@@ -84,4 +98,5 @@ class SHTTPSuspensionServer {
 			System.exit(2);
 		}
 		server.run();
+	}
 }

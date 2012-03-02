@@ -62,13 +62,14 @@ runloop:
 					continue;
 				}
 			
-				SHTTPRequest request = new SHTTPRequest(file);
+				SHTTPRequest request = new SHTTPRequest();
+				request.setURL(file);
 
 				DataOutputStream outToServer;
 				try {
 					outToServer = new DataOutputStream(
 						clientSocket.getOutputStream());
-					outToServer.writeBytes(request.getString());
+					request.writeToStream(outToServer);
 				} catch (IOException ie) {
 					System.out.println("Error opening output stream to server: " +
 						ie.getMessage());

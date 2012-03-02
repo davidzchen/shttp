@@ -2,17 +2,23 @@ import java.io.*;
 import java.util.*;
 import java.net.*;
 
-class SHTTPPerRequestServer {
+class SHTTPPerRequestServer implements ISHTTPSyncServer {
 
 	private ServerSocket _listenSocket;
 	private ServerConfig _config;
+	private ServerCache  _serverCache;
 
 	public SHTTPPerRequestServer(ServerConfig config)
 		throws IOException
 	{
 		_config = config;
 		_listenSocket = new ServerSocket(_config.listenPort());
-		_config.print();
+		_serverCache = new ServerCache(_config.cacheSize());
+	}
+
+	public boolean loadAvailable()
+	{
+		return true;
 	}
 
 	public void run()
@@ -30,7 +36,8 @@ class SHTTPPerRequestServer {
 			System.out.println("Receiving request from " + connectionSocket);
 
 			SHTTPPerRequestThread thread = new SHTTPPerRequestThread(
-				connectionSocket, _config.documentRoot());
+				connectionSocket, _config.documentRoot(), _serverCache, 
+				this);
 			thread.start();
 		}
 	}
@@ -71,4 +78,5 @@ class SHTTPPerRequestServer {
 			System.exit(2);
 		}
 		server.run();
+	}
 }
