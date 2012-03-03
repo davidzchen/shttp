@@ -10,8 +10,8 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 	private SocketChannel _client;
 
 	private boolean _requestComplete;
-	private boolean _requestReady;
-	private boolean _requestSent;
+	private boolean _responseReady;
+	private boolean _responseSent;
 	private boolean _channelClosed;
 
 	private int _requestTermCount;
@@ -19,6 +19,8 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 	private ServerCache _serverCache;
 	private String _documentRoot;
 
+	private SHTTPRequest _request;
+	private SHTTPResponse _response;
 	private ByteBuffer _inBuffer;
 	private ByteBuffer _outBuffer;
 
@@ -33,7 +35,7 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 		_documentRoot = documentRoot;
 
 		_requestComplete = false;
-		_requestReady    = false;
+		_responseReady    = false;
 		_responseSent    = false;
 		_channelClosed   = false;
 
@@ -49,12 +51,17 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 		return SelectionKey.OP_READ;	
 	}
 
+	public void handleException()
+	{
+	
+	}
+
 	private void _processInBuffer()
 		throws IOException
 	{
 		Debug.DEBUG("  > processInBuffer()");
-		in readBytes = _client.read(_inBuffer);
-		Debug.DEBUG("  > handleRead: Read data from connection " + client +
+		int readBytes = _client.read(_inBuffer);
+		Debug.DEBUG("  > handleRead: Read data from connection " + _client +
 			" for " + readBytes +
 			" byte(s); to buffer " + _inBuffer);
 
@@ -65,7 +72,7 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 			_inBuffer.flip();
 			while (!_requestComplete && _inBuffer.hasRemaining() &&
 				   _requestBuffer.length() < _requestBuffer.capacity()) {
-				char ch = (char) inBuffer.get();
+				char ch = (char) _inBuffer.get();
 				_requestBuffer.append(ch);
 				if (ch == '\r') {
 					if (_requestTermCount == 0 || _requestTermCount == 2)
@@ -93,8 +100,6 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 	public void _processRequest()
 		throws IOException
 	{
-		SHTTPRequest request;
-
 		try {
 			_request = new SHTTPRequest(_requestBuffer);
 		} catch (SHTTPRequestException se) {
@@ -166,7 +171,7 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 
 		if (_responseSent) {
 			Debug.DEBUG("*** Response sent; Connection closed");
-			dispatcher.deregisterSelection(sk);
+			dispatcher.deregisterSelection(selectionKey);
 			_client.close();
 			_channelClosed = true;
 			return;

@@ -27,17 +27,17 @@ public class Dispatcher implements Runnable {
 		IChannelHandler handler, int ops) 
 		throws ClosedChannelException
 	{
-		SelectionKey key = channel.register(selector, ops);
+		SelectionKey key = channel.register(_selector, ops);
 		key.attach(handler);
 		return key;
 	}
 
 	public SelectionKey keyFor(SelectableChannel channel)
 	{
-		return channel.keyFor(selector);
+		return channel.keyFor(_selector);
 	}
 
-	public void deregisterSelection(SelectinoKey key)
+	public void deregisterSelection(SelectionKey key)
 		throws IOException
 	{
 		key.cancel();
@@ -62,7 +62,7 @@ public class Dispatcher implements Runnable {
 				break;
 			}
 
-			Set readyKeys = selector.selectedKeys();
+			Set readyKeys = _selector.selectedKeys();
 			Iterator iterator = readyKeys.iterator();
 
 			while (iterator.hasNext()) {
@@ -92,12 +92,11 @@ public class Dispatcher implements Runnable {
 					}
 				} catch (IOException ie) {
 					Debug.DEBUG("Error handling key [" + key + "]: " +
-						ie.getMessage();
-						try {
-							key.channel().close();
-						} catch (IOException iie) {
-							/* Do nothing */
-						}
+						ie.getMessage());
+					try {
+						key.channel().close();
+					} catch (IOException iie) {
+						/* Do nothing */
 					}
 				}
 			}

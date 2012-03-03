@@ -9,7 +9,7 @@ public class Acceptor implements IAcceptHandler {
 	private Dispatcher _dispatcher;
 	private ServerSocketChannel _server;
 	private ISocketReadWriteHandlerFactory _srwf;
-	private ServerCache _config;
+	private ServerCache _serverCache;
 	private String _documentRoot;
 
 
@@ -37,10 +37,11 @@ public class Acceptor implements IAcceptHandler {
 
 		client.configureBlocking(false);
 
-		IReadWriteHandler rwH = srwf.createHandler(dispatcher, client);
+		IReadWriteHandler rwH = _srwf.createHandler(_dispatcher, client,
+			_serverCache, _documentRoot);
 		int ops = rwH.getInitOps();
 
-		SelectionKey clientKey = dispatcher.registerNewSelection(client,
+		SelectionKey clientKey = _dispatcher.registerNewSelection(client,
 			rwH, ops);
 	}
 }
