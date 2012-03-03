@@ -56,6 +56,8 @@ class WebRequestHandler {
 			return;
 		}
 
+		request.print();
+
 		/* Try to map request to file. */
 		try {
 			mapURLToFile(request);
@@ -100,7 +102,6 @@ class WebRequestHandler {
 		throws IOException, SHTTPRequestException
 	{
 		_urlName = request.getURL();
-
 		if (_urlName.startsWith("/")) {
 			_urlName = _urlName.substring(1);
 		}
@@ -152,15 +153,22 @@ class WebRequestHandler {
 
 		/* If file is found in cache (by name), the just get the file contents
 		   from server cache. */
-		_fileContents = _serverCache.getFile(_fileName).content();
-		if (_fileContents != null)
+		ServerCacheFile cacheFile = _serverCache.getFile(_fileName);
+		if (cacheFile != null) {
+			Debug.DEBUG("Cache hit: " + _fileName);
+			_fileContents = cacheFile.content();
 			return;
+		}
 
 		/* If file is not executable, get contents of file and return. */
+		Debug.DEBUG("Final file name " + _fileName);
+		Debug.DEBUG("Is executable?? " + _fileInfo.canExecute());
 		if (!_fileInfo.canExecute()) {
 			_fileContents = new byte[(int) _fileInfo.length()];
 			InputStream in = new FileInputStream(_fileInfo);
 			in.read(_fileContents);
+
+			_serverCache.putFile(_fileName, _fileInfo);
 			return;
 		}
 
