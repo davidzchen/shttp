@@ -7,10 +7,11 @@ import java.io.*;
 public class SHTTPAsyncServer {
 
 	public static ServerSocketChannel openServerChannel(int port)
+		throws IOException
 	{
 		ServerSocketChannel serverChannel = null;
 
-		serverChannel = SocketServerChannel.open();
+		serverChannel = ServerSocketChannel.open();
 
 		/* Extract server socket of the server channel and bind the port. */
 		ServerSocket serverSocket = serverChannel.socket();
@@ -59,7 +60,15 @@ public class SHTTPAsyncServer {
 
 		/* Open server socket channel. */
 		int port = config.listenPort();
-		ServerSocketChannel socketChannel = openServerChannel(port);
+		ServerSocketChannel socketChannel = null;
+			
+		try {
+			socketChannel = openServerChannel(port);
+		} catch (IOException ie) {
+			System.err.println("Cannot open server channel: " +
+				ie.getMessage());
+			System.exit(1);
+		}
 
 		/* Create server acceptor for SHTTP ReadWrite Handler. */
 		ISocketReadWriteHandlerFactory shttpFactory =
@@ -71,7 +80,7 @@ public class SHTTPAsyncServer {
 
 		/* Register server channel to a selector. */
 		try {
-			SelectionKey dispatcher.registerNewSelection(
+			SelectionKey sk = dispatcher.registerNewSelection(
 				socketChannel, acceptor, SelectionKey.OP_ACCEPT);
 
 			dispatcherThread = new Thread(dispatcher);

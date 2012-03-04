@@ -21,7 +21,7 @@ class ServerCache {
 		return _cacheStore.get(key);
 	}
 
-	public void putFile(String key, File fileInfo)
+	public synchronized void putFile(String key, File fileInfo)
 	{
 		if (isFull(fileInfo.length()))
 			return;

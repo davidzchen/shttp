@@ -139,6 +139,33 @@ public class SHTTPResponse {
 		}
 	}
 
+	public ByteBuffer toByteBuffer()
+		throws UnsupportedEncodingException
+	{
+		StringBuffer sb = new StringBuffer();
+
+		sb.append("HTTP/1.0 " + _statusCode + " " + _message + "\r\n");
+
+		if (_serverName != null)
+			sb.append("Server: " + _serverName + "\r\n");
+		if (_date != null)
+			sb.append("Date: " + _date + "\r\n");
+		if (_lastModified != null)
+			sb.append("Last-Modified: " +
+				DateHelper.getHTTPDate(_lastModified) + "\r\n");
+		if (_contentType != null)
+			sb.append("Content-Type: " + _contentType + "\r\n");
+		if (_content != null) {
+			sb.append("Content-Length: " + _contentLength + "\r\n");
+			sb.append("\r\n");
+			sb.append(_content);
+		}
+
+		String s = sb.toString();
+		byte[] b = s.getBytes("US-ASCII");
+		return ByteBuffer.wrap(b);
+	}
+
 	public int numBytesRead()
 	{
 		return _totalBytes;

@@ -56,8 +56,6 @@ class WebRequestHandler {
 			return;
 		}
 
-		request.print();
-
 		/* Try to map request to file. */
 		try {
 			mapURLToFile(request);
@@ -155,14 +153,11 @@ class WebRequestHandler {
 		   from server cache. */
 		ServerCacheFile cacheFile = _serverCache.getFile(_fileName);
 		if (cacheFile != null) {
-			Debug.DEBUG("Cache hit: " + _fileName);
 			_fileContents = cacheFile.content();
 			return;
 		}
 
 		/* If file is not executable, get contents of file and return. */
-		Debug.DEBUG("Final file name " + _fileName);
-		Debug.DEBUG("Is executable?? " + _fileInfo.canExecute());
 		if (!_fileInfo.canExecute()) {
 			_fileContents = new byte[(int) _fileInfo.length()];
 			InputStream in = new FileInputStream(_fileInfo);
