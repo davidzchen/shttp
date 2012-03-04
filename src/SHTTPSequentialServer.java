@@ -4,6 +4,8 @@ import java.net.*;
 
 class SHTTPSequentialServer implements ISHTTPSyncServer {
 
+	public static final String SERVER_NAME = "SHTTPSequentialServer 0.1";
+
 	private ServerSocket _listenSocket;
 	private ServerConfig _config;
 	private ServerCache  _serverCache;
@@ -38,7 +40,7 @@ class SHTTPSequentialServer implements ISHTTPSyncServer {
 			WebRequestHandler requestHandler;
 			try {
 				requestHandler = new WebRequestHandler(connectionSocket, 
-					_config.documentRoot(), _serverCache, this);
+					_config.documentRoot(), _serverCache, this, SERVER_NAME);
 			} catch (IOException ie) {
 				System.err.println("Cannot create request handler: " +
 					ie.getMessage());

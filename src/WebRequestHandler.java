@@ -12,19 +12,19 @@ class WebRequestHandler {
 	private BufferedReader _inFromClient;
 	private DataOutputStream _outToClient;
 
-	private String _urlName;
-	private String _fileName;
+	private String _serverName;
 	private File _fileInfo;
 	private String _contentType;
 	private byte[] _fileContents;
 
-	private boolean _ifModifiedSince;
+	private boolean _notModified;
 	private boolean _loadBalancer;
 
 	public WebRequestHandler(Socket connectionSocket, String documentRoot,
-		ServerCache serverCache, ISHTTPSyncServer server)
+		ServerCache serverCache, ISHTTPSyncServer server, String serverName)
 		throws IOException, UnsupportedEncodingException
 	{
+		_serverName       = serverName;
 		_server           = server;
 		_documentRoot     = documentRoot;
 		_connectionSocket = connectionSocket;
@@ -36,7 +36,7 @@ class WebRequestHandler {
 		_outToClient = new DataOutputStream(
 			_connectionSocket.getOutputStream());
 
-		_ifModifiedSince = false;
+		_notModified = false;
 		_loadBalancer = false;
 	}
 
@@ -80,7 +80,7 @@ class WebRequestHandler {
 		}
 
 		/* If we are sending a 304 not modified response, send it. */
-		if (_ifModifiedSince == true) {
+		if (_notModified == true) {
 			sendNotModifiedReply();
 			return;
 		}
@@ -99,40 +99,40 @@ class WebRequestHandler {
 	public void mapURLToFile(SHTTPRequest request)
 		throws IOException, SHTTPRequestException
 	{
-		_urlName = request.getURL();
-		if (_urlName.startsWith("/")) {
-			_urlName = _urlName.substring(1);
+		String urlName = request.getURL();
+		if (urlName.startsWith("/")) {
+			urlName = urlName.substring(1);
 		}
 
 		/* If request is seeking load, set loadBalancer flag and return. */
-		if (_urlName.equals("load")) {
+		if (urlName.equals("load")) {
 			_loadBalancer = true;
 			return;
 		}
 
 		/* If file is unnamed, find out if user agent is mobile and map corredt
 		   index.html. */
-		_fileName = _documentRoot + _urlName;
-		if (_urlName.endsWith("/")) {
+		String fileName = _documentRoot + urlName;
+		if (urlName.endsWith("/")) {
 			if (request.isMobile()) {
-				_fileName = _fileName + Const.DOC_MINDEX;
+				fileName = fileName + Const.DOC_MINDEX;
 			} else {
-				_fileName = _fileName + Const.DOC_INDEX;
+				fileName = fileName + Const.DOC_INDEX;
 			}
 		}
 
 		/* Set content type based on file extension. */
-		if (_fileName.endsWith(".jpg"))
+		if (fileName.endsWith(".jpg"))
 			_contentType = "image/jpeg";
-		else if (_fileName.endsWith(".gif"))
+		else if (fileName.endsWith(".gif"))
 			_contentType = "image/gif";
-		else if (_fileName.endsWith(".html") || _fileName.endsWith(".htm"))
+		else if (fileName.endsWith(".html") || fileName.endsWith(".htm"))
 			_contentType = "text/html";
 		else
 			_contentType = "text/plain";
 
 		/* Look for file. */
-		_fileInfo = new File(_fileName);
+		_fileInfo = new File(fileName);
 		if (!_fileInfo.isFile()) {
 			_fileInfo = null;
 			throw new SHTTPRequestException("Not found", Status.NOT_FOUND);
@@ -144,14 +144,14 @@ class WebRequestHandler {
 			long requestTime = request.getIfModifiedSince().getTime();
 			long fileTime = _fileInfo.lastModified();
 			if (fileTime < requestTime) {
-				_ifModifiedSince = true;
+				_notModified = true;
 				return;
 			}
 		}
 
 		/* If file is found in cache (by name), the just get the file contents
 		   from server cache. */
-		ServerCacheFile cacheFile = _serverCache.getFile(_fileName);
+		ServerCacheFile cacheFile = _serverCache.getFile(fileName);
 		if (cacheFile != null) {
 			_fileContents = cacheFile.content();
 			return;
@@ -163,12 +163,12 @@ class WebRequestHandler {
 			InputStream in = new FileInputStream(_fileInfo);
 			in.read(_fileContents);
 
-			_serverCache.putFile(_fileName, _fileInfo);
+			_serverCache.putFile(fileName, _fileInfo);
 			return;
 		}
 
 		/* Handle an executable file. */
-		Process proc = Runtime.getRuntime().exec(_fileName);
+		Process proc = Runtime.getRuntime().exec(fileName);
 		BufferedReader procOut = new BufferedReader(new InputStreamReader(
 			proc.getInputStream()));
 		StringBuffer procOutSb = new StringBuffer();
@@ -191,6 +191,7 @@ class WebRequestHandler {
 		SHTTPResponse response = new SHTTPResponse();
 
 		response.setStatus(status, message);
+		response.setServerName(_serverName);
 		response.setContent(
 			"<html>" +
 			"<h1>" + status + ": " + message + "</h1>" +
@@ -210,6 +211,7 @@ class WebRequestHandler {
 
 		response.setStatus(status, "Load status");
 		response.setContent("Load status: " + status);
+		response.setServerName(_serverName);
 
 		try {
 			response.writeToStream(_outToClient);
@@ -225,6 +227,7 @@ class WebRequestHandler {
 
 		response.setStatus(Status.NOT_MODIFIED, "Not modified");
 		response.setContent("File not modified");
+		response.setServerName(_serverName);
 
 		try {
 			response.writeToStream(_outToClient);
@@ -245,7 +248,7 @@ class WebRequestHandler {
 			System.err.println("Wtf? UnsupportedEncodingException? " +
 				uee.getMessage());
 		}
-		response.setServerName("SHTTP 0.1");
+		response.setServerName(_serverName);
 		response.setContentType(_contentType);
 
 		try {

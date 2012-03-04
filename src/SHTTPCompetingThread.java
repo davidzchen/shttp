@@ -40,7 +40,8 @@ class SHTTPCompetingThread extends Thread {
 			
 			try {
 				requestHandler = new WebRequestHandler(connectionSocket, 
-					_documentRoot, _serverCache, _server);
+					_documentRoot, _serverCache, _server, 
+					SHTTPCompetingServer.SERVER_NAME);
 			} catch (IOException ie) {
 				System.err.println("Cannot create request handler: " +
 					ie.getMessage());

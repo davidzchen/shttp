@@ -6,6 +6,8 @@ import java.io.*;
 
 public class SHTTPAsyncServer {
 
+	public static final String SERVER_NAME = "SHTTPAsyncServer 0.1";
+
 	public static ServerSocketChannel openServerChannel(int port)
 		throws IOException
 	{
@@ -85,13 +87,14 @@ public class SHTTPAsyncServer {
 
 			dispatcherThread = new Thread(dispatcher);
 			dispatcherThread.start();
+
+			/* Ugly-ass hack for invokeAndWait() */
+			dispatcher.setThread(dispatcherThread);
 		} catch (IOException ie) {
 			System.out.println("Cannot register and start server: " +
 				ie.getMessage());
 			ie.printStackTrace();
 			System.exit(1);
 		}
-
-		// XXX Join the dispatcher thread??
 	}
 }

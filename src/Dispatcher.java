@@ -4,14 +4,20 @@ import java.util.*;
 
 public class Dispatcher implements Runnable {
 
+	private Thread _dispatcherThread;
+
 	private ServerCache _serverCache;
 	private ServerConfig _config;
 	private Selector _selector;
+
+	private List<Runnable> _pendingInvocations;
 
 	public Dispatcher(ServerCache serverCache, ServerConfig config) 
 	{
 		_config = config;
 		_serverCache = serverCache;
+
+		_pendingInvocations = new ArrayList<Runnable>(32);
 
 		try {
 			_selector = Selector.open();
@@ -48,10 +54,56 @@ public class Dispatcher implements Runnable {
 		sk.interestOps(newOps);
 	}
 
+	public void setThread(Thread thread)
+	{
+		_dispatcherThread = thread;
+	}
+
+	public void invokeLater(Runnable task)
+	{
+		synchronized (_pendingInvocations) {
+			_pendingInvocations.add(task);
+		}
+		_selector.wakeup();
+	}
+
+	public void invokeAndWait(final Runnable task)
+		throws InterruptedException
+	{
+		if (Thread.currentThread() == _dispatcherThread) {
+			task.run();
+		} else {
+			final Object latch = new Object();
+			synchronized (latch) {
+				this.invokeLater(new Runnable() {
+					public void run()
+					{
+						task.run();
+						latch.notify();
+					}
+				});
+				latch.wait();
+			}
+		}
+	}
+
+	private void _doInvocations()
+	{
+		synchronized (_pendingInvocations) {
+			for (int i = 0; i < _pendingInvocations.size(); i++) {
+				Runnable task = (Runnable) _pendingInvocations.get(i);
+				task.run();
+			}
+			_pendingInvocations.clear();
+		}
+	}
+
 	public void run()
 	{
 		while (true) {
 			Debug.DEBUG("Enter selection");
+
+			_doInvocations();
 
 			try {
 				_selector.select();

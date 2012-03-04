@@ -25,7 +25,8 @@ class SHTTPPerRequestThread extends Thread {
 		
 		try {
 			requestHandler = new WebRequestHandler(_connectionSocket, 
-				_documentRoot, _serverCache, _server);
+				_documentRoot, _serverCache, _server, 
+				SHTTPPerRequestServer.SERVER_NAME);
 		} catch (IOException ie) {
 			System.err.println("Cannot create request handler: " +
 				ie.getMessage());

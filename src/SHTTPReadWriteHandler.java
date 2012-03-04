@@ -254,6 +254,7 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 	{
 		_response = new SHTTPResponse();
 		_response.setStatus(errorCode, message);
+		_response.setServerName(SHTTPAsyncServer.SERVER_NAME);
 		_response.setContent(
 			"<html>" +
 			"<h1>" + errorCode + ": " + message + "</h1>" +
@@ -272,6 +273,7 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 		_response = new SHTTPResponse();
 		_response.setStatus(Status.NOT_MODIFIED, "Not modified");
 		_response.setContent("File not modified");
+		_response.setServerName(SHTTPAsyncServer.SERVER_NAME);
 
 		try {
 			_outBuffer = _response.toByteBuffer();
@@ -286,6 +288,7 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 		_response = new SHTTPResponse();
 		_response.setStatus(status, "Load status");
 		_response.setContent("Load status: " + status);
+		_response.setServerName(SHTTPAsyncServer.SERVER_NAME);
 		
 		try {
 			_outBuffer = _response.toByteBuffer();
@@ -308,7 +311,7 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 				Status.INTERNAL_SERVER_ERROR);
 			return;
 		}
-		_response.setServerName("SHTTPAsyncServer 0.1");
+		_response.setServerName(SHTTPAsyncServer.SERVER_NAME);
 		_response.setContentType(_contentType);
 
 		try {

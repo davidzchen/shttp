@@ -4,6 +4,8 @@ import java.net.*;
 
 public class SHTTPCompetingServer implements ISHTTPSyncServer {
 
+	public static final String SERVER_NAME = "SHTTPCompetingServer 0.1";
+
 	private ServerSocket _listenSocket;
 	private ServerConfig _config;
 	private ServerCache _serverCache;

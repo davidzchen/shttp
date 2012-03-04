@@ -4,6 +4,8 @@ import java.net.*;
 
 class SHTTPPerRequestServer implements ISHTTPSyncServer {
 
+	public static final String SERVER_NAME = "SHTTPPerRequestServer 0.1";
+
 	private ServerSocket _listenSocket;
 	private ServerConfig _config;
 	private ServerCache  _serverCache;

@@ -4,6 +4,8 @@ import java.net.*;
 
 public class SHTTPSuspensionServer implements ISHTTPSyncServer {
 
+	public static final String SERVER_NAME = "SHTTPSuspensionServer 0.1";
+
 	private static final int SERVER_LOAD_THRESHOLD = 20;
 
 	private ServerSocket _listenSocket;
