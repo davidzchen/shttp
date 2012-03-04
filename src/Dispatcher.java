@@ -67,6 +67,17 @@ public class Dispatcher implements Runnable {
 		_selector.wakeup();
 	}
 
+	public void closeChannel(SelectionKey key)
+	{
+		try {
+			key.channel().close();
+			deregisterSelection(key);
+		} catch (IOException ie) {
+			System.err.println("Error closing channel associated with key: " +
+				ie.getMessage());
+		}
+	}
+
 	public void invokeAndWait(final Runnable task)
 		throws InterruptedException
 	{
@@ -128,7 +139,6 @@ public class Dispatcher implements Runnable {
 						IAcceptHandler aH = (IAcceptHandler) key.attachment();
 						aH.handleAccept(key);
 					}
-
 
 					if (key.isReadable() || key.isWritable()) {
 						IReadWriteHandler rwH = (IReadWriteHandler) 

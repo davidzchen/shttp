@@ -7,6 +7,7 @@ import java.io.*;
 public class SHTTPReadWriteHandler implements IReadWriteHandler {
 
 	private Dispatcher _dispatcher;
+	private IdleTimer _idleTimer;
 	private SocketChannel _client;
 
 	private boolean _requestComplete;
@@ -34,9 +35,10 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 	private String _contentType;
 
 	public SHTTPReadWriteHandler(Dispatcher dispatcher, SocketChannel client,
-		ServerCache serverCache, String documentRoot)
+		ServerCache serverCache, String documentRoot, IdleTimer idleTimer)
 	{
 		_dispatcher   = dispatcher;
+		_idleTimer    = idleTimer;
 		_client       = client;
 		_serverCache  = serverCache;
 		_documentRoot = documentRoot;
@@ -377,6 +379,7 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 			nextState = nextState & ~SelectionKey.OP_READ;
 			Debug.DEBUG("New state: -Read (request parsing complete)");
 		} else {
+			_idleTimer.cancelIdleTimer(selectionKey);
 			nextState = nextState | SelectionKey.OP_READ;
 			Debug.DEBUG("New state: +Read (continue to read request)");
 		}
