@@ -63,9 +63,17 @@
 
 \section{Asynchronous Server}
 
+The architecture of the asynchronous server \texttt{SHTTPAsyncServer} closely follows that of the Asynchronous Server V3. A new \texttt{ReadWriteHander} (\texttt{SHTTPReadWriteHandler}) was implemented to handle HTTP requests. The request handling code was based heavily on the handler code used by the synchronous servers, \texttt{WebRequestHander}, but adapted for asynchronous socket I/O. Another change made was that the load balancing callback is now made to the \texttt{Dispatcher} object rather than the instance of the \texttt{SHTTPAsyncServer}.
+
+In order to implement timeout, a separate thread that monitors timeout events of different opened sockets is instantiated along with the Dispatcher thread. When the Acceptor handler accepts a connection, after creating the \texttt{ReadWriteHandler}, it registers a timeout event for the \texttt{ReadWriteHandler}'s selection key. The selection key is added to the \texttt{IdleTimer}'s asynchronous queue, which is processed at the beginning of each iteration of the timeout thread's run loop. Later, when the \texttt{ReadWriteHandler} completes reading the request, it sends a cancellation request to the timeout thread, which is placed in another asynchronous queue in the timeout thread.
+
+The timeout thread should not close the channel directly because the Dispatcher will still have the key registered and will not be able to know about the closing of the channel so that it may deregister the key. The timeout thread maintains two asynchronous queues and a \texttt{HashMap} that tracks the end-times of timeout events that are keyed by their selection key. The main loop of the timeout thread is as follows. First, it checks its timeout registration queue and adds each selection key to the HashMap with the end-time set to the current time plus the incomplete timeout set by the server's configuration file. Then, it checks its cancellation request queue and removes each of the requested timeout events from the HashMap. 
+
+Finally, it iterates through all of the timeout events in the HashMap. For each key-value pair found, it checks whether the current time has passed the end-time. If it has, then a new \texttt{IdleTimerTask} object is created, which is a simple Runnable whose \texttt{run()} method simply calls the method of the Dispatcher to close the channel associated with a particular selection key. The Dispatcher was modified to also contain an asynchronous queue based on \texttt{invokeLater()} from Santos's article. The timer thread adds the task to the Dispatcher's asynchronous queue using \texttt{invokeLater()}, and the Dispatcher closes the channel associated with that selection key and deregisters the key.
+
+
 \section{Comparison of Designs}
 
-
-
+By default, xsocket creates $\text{number of CPUs} + 1$ dispatcher threads.
 
 \end{document}

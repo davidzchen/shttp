@@ -61,7 +61,7 @@ public class ServerConfig {
 			} else if (parts[0].equals(T_CACHE_SIZE)) {
 				_cacheSize = Integer.parseInt(parts[1]);
 			} else if (parts[0].equals(T_INCOMPLETE_TIMEOUT)) {
-				_incompleteTimeout = Integer.parseInt(parts[1]);
+				_incompleteTimeout = Integer.parseInt(parts[1]) * 1000;
 			} else {
 				throw new ServerConfigException(
 					"Invalid configuration directive", filename, line,

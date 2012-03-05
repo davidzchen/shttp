@@ -376,10 +376,10 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 
 		int nextState = 0;
 		if (_requestComplete) {
+			_idleTimer.cancelIdleTimer(selectionKey);
 			nextState = nextState & ~SelectionKey.OP_READ;
 			Debug.DEBUG("New state: -Read (request parsing complete)");
 		} else {
-			_idleTimer.cancelIdleTimer(selectionKey);
 			nextState = nextState | SelectionKey.OP_READ;
 			Debug.DEBUG("New state: +Read (continue to read request)");
 		}

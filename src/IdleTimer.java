@@ -24,6 +24,7 @@ public class IdleTimer implements Runnable {
 
 	public void registerIdleTimer(SelectionKey key)
 	{
+		Debug.WARN(" ~~ Register idle timer for key: " + key);
 		synchronized (_addRequests) {
 			_addRequests.add(key);
 		}
@@ -31,6 +32,7 @@ public class IdleTimer implements Runnable {
 
 	public void cancelIdleTimer(SelectionKey key)
 	{
+		Debug.WARN(" ~~ Cancel idle timer for key: " + key);
 		synchronized (_cancelRequests) {
 			_cancelRequests.add(key);
 		}
@@ -63,7 +65,8 @@ public class IdleTimer implements Runnable {
 				long endTime = entry.getValue();
 				long currTime = System.currentTimeMillis();
 
-				if (endTime > currTime) {
+				if (currTime > endTime) {
+					Debug.WARN(" ~~ Attempt to close channel for key: " + key);
 					_dispatcher.invokeLater(new IdleTimerTask(_dispatcher, key));
 					_idleTimers.remove(key);
 				}

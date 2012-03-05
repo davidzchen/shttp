@@ -5,7 +5,7 @@ JSRC = $(wildcard src/*.java)
 
 # For building docs
 TEX = pdflatex
-TEX_OBJ = doc/dzc2-prog1-report.pdf
+TEX_OBJ = dzc2-prog1-report.pdf dzc2-prog1-report.aux dzc2-prog1-report.log
 
 .PHONY: all clean jar doc dclean
 
@@ -17,11 +17,11 @@ all: $(JSRC)
 clean:
 	rm -rf src/*.class
 
-doc: doc/dzc2-prog1-report.pdf
+doc: doc/dzc2-prog1-report.tex
 	$(TEX) $<
 
 dclean:
 	rm -rf $(TEX_OBJ)
 
 jar:
-	@echo "null"
+	jar cvf shttp-0.1.jar src/* shttp.conf
