@@ -18,19 +18,6 @@ public class SHTTPResponse {
 
 	private int _totalBytes;
 
-	public static int getTotalBytesRead(BufferedReader in)
-		throws IOException
-	{
-		int bytesRead = 0;
-		String line;
-
-		while ((line = in.readLine()) != null) {
-			bytesRead += line.length() + 2;
-		}
-
-		return bytesRead;
-	}
-
 	public SHTTPResponse()
 	{
 		_statusCode    = 0;

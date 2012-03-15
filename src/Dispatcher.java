@@ -12,10 +12,13 @@ public class Dispatcher implements Runnable {
 
 	private List<Runnable> _pendingInvocations;
 
+	private Integer _activeRequests;
+
 	public Dispatcher(ServerCache serverCache, ServerConfig config) 
 	{
 		_config = config;
 		_serverCache = serverCache;
+		_activeRequests = 0;
 
 		_pendingInvocations = new ArrayList<Runnable>(32);
 

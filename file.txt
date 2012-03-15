@@ -1,3 +1,4 @@
-/www/index.html
-/www/
-/www/test
+/
+/index.html
+/about/
+

@@ -21,8 +21,15 @@ public class SHTTPTestClient extends Thread {
 	public static void incrFilesDownloadedCallback(int bytesDownloaded)
 	{
 		synchronized (_clientStats) {
-			_clientStats.filesDownloaded++;
-			_clientStats.bytesDownloaded += bytesDownloaded;
+			_clientStats.incrFilesDownloaded();
+			_clientStats.incrBytesDownloaded(bytesDownloaded);
+		}
+	}
+
+	public static void incrWaitTimeCallback(long waitTime)
+	{
+		synchronized (_clientStats) {
+			_clientStats.incrWaitTime(waitTime);
 		}
 	}
 
@@ -75,13 +82,24 @@ runloop:
 						ie.getMessage());
 					continue;
 				}
+				long requestTime = System.currentTimeMillis();
 
 				BufferedReader inFromServer;
 				int bytesRead;
 				try {	
 					inFromServer = new BufferedReader(new InputStreamReader(
 						clientSocket.getInputStream(), "US-ASCII"));
-					bytesRead = SHTTPResponse.getTotalBytesRead(inFromServer);
+
+					bytesRead = 0;
+					String responseLine;
+					while ((responseLine = inFromServer.readLine()) != null) {
+						if (bytesRead == 0)
+							SHTTPTestClient.incrWaitTimeCallback(
+								System.currentTimeMillis() - requestTime);
+
+						bytesRead += responseLine.length() + 2;
+					}
+
 				} catch (IOException ie) {
 					//System.out.println("Error reading from server: " + 
 					//	ie.getMessage());
@@ -158,7 +176,7 @@ runloop:
 	public static void main(String[] args)
 	{
 		_parseOptions(args);
-		_clientStats = new SHTTPTestClientStats();
+		_clientStats = new SHTTPTestClientStats(_time);
 
 		try {
 			_readFile();
@@ -193,9 +211,15 @@ runloop:
 			System.exit(5);
 		}
 
-		System.out.println("Total files downloaded: " + 
-			_clientStats.filesDownloaded);
-		System.out.println("Total bytes downloaded: " +
-			_clientStats.bytesDownloaded);
+		System.out.println("        Total files downloaded: " + 
+			_clientStats.getFilesDownloaded());
+		System.out.println("        Total bytes downloaded: " +
+			_clientStats.getBytesDownloaded());
+		System.out.println("Total transactional throughput: " +
+			_clientStats.getTransactionalThroughput() + " files/s");
+		System.out.println("          Data rate throughput: " +
+			_clientStats.getDataRateThroughput() + " b/s");
+		System.out.println("             Average wait time: " +
+			_clientStats.getAverageWaitTime() + " ms");
 	}
 }
