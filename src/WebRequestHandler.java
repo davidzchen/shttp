@@ -131,6 +131,8 @@ class WebRequestHandler {
 		else
 			_contentType = "text/plain";
 
+		Debug.DEBUG("Filename: " + fileName);
+
 		/* Look for file. */
 		_fileInfo = new File(fileName);
 		if (!_fileInfo.isFile()) {
