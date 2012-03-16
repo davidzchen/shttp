@@ -136,8 +136,10 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 
 		/* If we're sending a load balancing reply. */
 		if (_loadBalancer == true) {
-			/* XXX Load balance! */
-
+			if (_dispatcher.loadAvailable())
+				_generateLoadReply(Status.OK);
+			else
+				_generateLoadReply(Status.SERVICE_UNAVAILABLE);
 			_responseReady = true;
 			return;
 		}
@@ -371,6 +373,7 @@ public class SHTTPReadWriteHandler implements IReadWriteHandler {
 			_dispatcher.deregisterSelection(selectionKey);
 			_client.close();
 			_channelClosed = true;
+			_dispatcher.decrLoad();
 			return;
 		}
 

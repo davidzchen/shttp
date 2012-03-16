@@ -45,5 +45,6 @@ public class Acceptor implements IAcceptHandler {
 		SelectionKey clientKey = _dispatcher.registerNewSelection(client,
 			rwH, ops);
 		_idleTimer.registerIdleTimer(clientKey);
+		_dispatcher.incrLoad();
 	}
 }

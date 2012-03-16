@@ -4,6 +4,8 @@ import java.util.*;
 
 public class Dispatcher implements Runnable {
 
+	private static final int SERVER_LOAD_THRESHOLD = 50;
+
 	private Thread _dispatcherThread;
 
 	private ServerCache _serverCache;
@@ -30,6 +32,29 @@ public class Dispatcher implements Runnable {
 			ie.printStackTrace();
 			System.exit(1);
 		}
+	}
+
+	public void incrLoad()
+	{
+		synchronized (_activeRequests) {
+			_activeRequests++;
+		}
+	}
+
+	public void decrLoad()
+	{
+		synchronized (_activeRequests) {
+			_activeRequests--;
+		}
+	}
+
+	public boolean loadAvailable()
+	{
+		boolean available;
+		synchronized (_activeRequests) {
+			available = (_activeRequests < SERVER_LOAD_THRESHOLD);
+		}
+		return available;
 	}
 
     public SelectionKey registerNewSelection(SelectableChannel channel, 

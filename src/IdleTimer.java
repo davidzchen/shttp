@@ -60,15 +60,20 @@ public class IdleTimer implements Runnable {
 				_cancelRequests.clear();
 			}
 
-			for (Map.Entry<SelectionKey, Long> entry : _idleTimers.entrySet()) {
-				SelectionKey key = entry.getKey();
-				long endTime = entry.getValue();
-				long currTime = System.currentTimeMillis();
+			synchronized (_idleTimers) {
+				for (Map.Entry<SelectionKey, Long> entry 
+					: _idleTimers.entrySet()) { /* XXX Here */
+					SelectionKey key = entry.getKey();
+					long endTime = entry.getValue();
+					long currTime = System.currentTimeMillis();
 
-				if (currTime > endTime) {
-					Debug.WARN(" ~~ Attempt to close channel for key: " + key);
-					_dispatcher.invokeLater(new IdleTimerTask(_dispatcher, key));
-					_idleTimers.remove(key);
+					if (currTime > endTime) {
+						Debug.WARN(" ~~ Attempt to close channel for key: " + 
+							key);
+						_dispatcher.invokeLater(new IdleTimerTask(_dispatcher, 
+							key));
+						_idleTimers.remove(key);
+					}
 				}
 			}
 		}
