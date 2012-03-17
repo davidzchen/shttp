@@ -80,7 +80,7 @@ According to the xsocket documentation, by default, xsocket creates $\text{numbe
 
 The dispatchers are created as follows. First, a \texttt{Server} object is created. The \texttt{Server} constructor calls \texttt{ConnectionUtils.getIoProvider().createAcceptor()} on line 489. The \texttt{createAcceptor()} method of \texttt{IoProvider} (IoProvider.java line 471) instantiates a \texttt{IoAcceptor} object (IoProvider.java line 478). The \texttt{IoAcceptor} constructor instantiates a \texttt{IoSocketDispatcherPool} (IoAcceptor.java line 119), passing it a size, which \texttt{IoSocketDispatcherPool} uses when it calls \texttt{setDispatcherSize()} (IoSocketDispatcherPool.java line 77) to set the size of the dispatcher thread pool. After it sets the size, it calls \texttt{updateDispatcher()} on line 290. The first time this method is called, it notices that the number of dispatcher threads running is less than the maximum and instantiates each dispatcher thread (line 178). Before instantiating each dispatcher, it creates a \texttt{IoUnsynchronizedMemoryManager} object for the dispatcher (line 172-176).
 
-
+The way that the dispatcher pool shares the workload may be seen in the \texttt{accept()} method of \texttt{IoAcceptor}. The \texttt{nextDispatcher()} method of \texttt{IoSocketDispatcherPool} allows the dispatcher threads to be retrieved and assigned in a round-robin fashion. After retrieving the next dispatcher thread, the acceptor simply assigns it the new connection.
 
 \subsection{Workflow of dispatcher}
 
@@ -140,6 +140,8 @@ As described above, a dispatcher thread is represented by the \texttt{IoSocketDi
 The main loop iterates as long as the Dispatcher is open. Each time through the loop, it calls \texttt{select()} (line 224). Then, it calls \texttt{performRegisterHandlerTasks()} (line 226) which runs all of the tasks on the asynchronous queue \texttt{registerQueue} to handle each of the register handler tasks. Then, it calls texttt{performKeyUpdateTasks()} (line 227) which similarly runs each task for updating selection keys on the asynchronous queue \texttt{keyUpdateQueue}. Then, if handlers have been registered and if selection keys have been updated, it means that there could be read and write events that need to be handled. Thus, it calls \texttt{handleReadWriteKeys()} which, similar to our dispatcher, loops through the set of selection keys and calls the read and write handlers for the read and write events. Then, it calls \texttt{performDeregisterHandlerTasks()} to run the tasks on the asynchronous queue \texttt{deregisterQueue} for deregistering handlers. Finally, it checks whether the thread is idle-looping by calling the parent class's \texttt{checkForLooping()} method, which has the thread either sleep or reinitialize the selector if idle looping is detected. Finally, if the dispatcher thread has closed, the loop terminates. Then, all of the \texttt{IoSocketHandler} objects are deregistered and the selector is closed.
 
 \subsection{\texttt{EchoHandler} calling sequence}
+
+
 
 \subsection{Idle timeout}
 
