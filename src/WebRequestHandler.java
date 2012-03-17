@@ -110,6 +110,8 @@ class WebRequestHandler {
 			return;
 		}
 
+		/* XXX Parse query string for GET. */
+
 		/* If file is unnamed, find out if user agent is mobile and map corredt
 		   index.html. */
 		String fileName = _documentRoot + urlName;
