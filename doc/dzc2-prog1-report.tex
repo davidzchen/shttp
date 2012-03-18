@@ -74,6 +74,8 @@ Finally, it iterates through all of the timeout events in the HashMap. For each 
 
 \section{Comparison of Designs}
 
+Reflecting our discussion in class, asynchronous servers are extremely complex. The xsocket library is a hybrid architecture, both asynchronous and multi-threaded. With the significant gain in performance, also comes a significant gain in complexity and difficulty of tracing execution paths through the server.
+
 \subsection{Dispatcher threads}
 
 According to the xsocket documentation, by default, xsocket creates $\text{number of CPUs} + 1$ dispatcher threads. The dispatcher threads, represented by the \texttt{IoSocketDispatcher} class, are managed in a \texttt{IoSocketDispatcherPool}.
@@ -141,9 +143,39 @@ The main loop iterates as long as the Dispatcher is open. Each time through the 
 
 \subsection{\texttt{EchoHandler} calling sequence}
 
+\subsubsection{System Initialization}
 
+The trace will begin with the initialization of the server. In EchoServerTest.java on line 50, a new \texttt{EchoServer} object is created with 0 as the listen port number. The constructor of \texttt{EchoServer} is defined on EchoServer.java line 54. In the constructor, a \texttt{EchoHandler} is first instatiated on line 56. Then, a new \texttt{Server} object is instantiated on line 68 and is passed the port number and the \texttt{EchoHandler}. The server's constructor (Server.java line 483) calls \texttt{setHandler()} (line 498) which creates a \texttt{HandlerAdapter} object that wraps the \texttt{EchoHandler} passed to it.
+
+The server is then set to asynchronous flush mode for the connection (line 69) and is then started (line 71). After the server is started, the server's \texttt{run()} method is invoked (Server.java line 586). Here, the server records the startup time (line 593), creates a handler to be invoked when the server shuts down (line 595), registers it (line 599) and calls the acceptor's \texttt{listen()} method (line 603). 
+
+The acceptor contains a reference to a \texttt{LifeCycleHandler} object. The acceptor's \texttt{listen()} method first calls the \texttt{onConnected()} method of the \texttt{LifeCycleHandler} (IoAcceptor.java line 205) which initializes the server's listener objects. Then, the acceptor calls \texttt{accept()} to enter its main loop (IoAcceptor.java line 206).
+
+\subsubsection{Making the connection}
+
+To trace the call sequence for a request, we start in the main loop of the acceptor in IoAcceptor.java lines 212-233. The acceptor's main loop iterates as long as the acceptor is open. It first calls \texttt{accept()} on the acceptor's \texttt{ServerSocketChannel}. Note that in the constructor of \texttt{IoAcceptor} on line 111, \texttt{serverChannel} is set to be blocking. As a result, this \texttt{accept()} call will block. Once a connection is established, the acceptor retrieves the next dispatcher thread from the dispatcher thread pool in a round-robin manner (line 219), creates a \texttt{IoChainableHandler} (line 220), which is passed the dispatcer and the socket channel. Following the \texttt{createIoHandler()}, we see that the type of \texttt{IoChainableHandler} is \texttt{IoSocketHandler} (IoProvider.java line 512). Finally, the acceptor calls the \texttt{onConnectionAccepted()} method of the \texttt{LifeCycleHandler}, passing it the \texttt{IoChainableHandler} (line 223) and increments the number of connections accepted.
+
+The \texttt{LifeCycleHandler} checks to see if the maximum number of connections have been exceeded (Server.java line 1134). If not, it creates a \texttt{NonBLockingConnection} object to represent the connection and initializes the connection (lines 1170-1171) and sets the timeout values (more in next section). The \texttt{NonBlockingConnection} is also the \texttt{EchoHandler}.
+
+The initialization of \texttt{NonBlockingConnection} is fairly complex. It creates a new \texttt{HandlerAdapter} to contain the \texttt{EchoHandler} (NonBlockingConnection.java line 722). On line 1191 of Server.java, the \texttt{init()} method of the \texttt{NonBlockingConnection} is called and is passed the \texttt{IoChainableHandler}. Tracing to NonBlockingConnection.java line 1042, we see that this overloaded method simply calls the other \texttt{init()} method, passing the \texttt{IoSocketHandler} and a \texttt{IoHandlerCallback} called \texttt{ioHandlerCallback}. Note that the \texttt{IoHandlerCallback} class, defined on line 2465, is actually a callback object for the \texttt{NonBlockingConnection} itself, and this will be important later.
+
+This \texttt{init()} method of the \texttt{NonBlockingConnection} then calls the \texttt{init()} method of the handler (line 1049), pasing the \texttt{IoHandlerCallback} callback object for itself. Finally, we see that the handler registers itself with the dispatcher in read mode (IoSocketHandler.java line 142). When the dispatcher registers the handler, it registers the handler's channel with its selector. As described in the xsocket documentation, a connection is associated with the same dispatcher for its entire lifecycle. We now continue our trace of the execution in the dispatcher's main loop.
+
+\subsubsection{Dispatcher}
+
+The dispatcher calls \texttt{select()} on line 224 of IoSocketDispatcher.java. If it detects that new handlers have been registers or selection keys have been updated, it calls \texttt{handleReadWriteKeys()} on line 230 (IoSocketDispatcher.java). This method is defined on line 261. It loops through each selection key. For each selection key, it obtains the attached \texttt{IoSocketHandler} on line 272. We recall that in the \texttt{EchoServerTest}, a short string \texttt{"test\textbackslash r\textbackslash n"} is written to the server. 
+
+Thus, at this point, the key is readable, and the dispatcher calls \texttt{onReadableEvent()} on line 278, which in turn calls the \texttt{onReadableEvent()} method of the handler on line 301. Then, on line 296 of IoSocketHandler.java, the handler in turn calls \texttt{onData()} of its reference to the \texttt{IoHandlerCallback} of the \texttt{NonBlockingConnection}. This method is defined on line 1208 of \texttt{NonBlockingConnection} and simply calls \texttt{appendDataToReadBuffer()} if the \texttt{ByteBuffer} pased to it is not null. The \texttt{appendDataToReadBuffer()} method is inherited from its parent class, \texttt{AbstractNonBlockingStream} and is defined on line 1484 of AbstractNonBlockingStream.java. Here, the \texttt{ByteBuffer} and size read are appended to a \texttt{readQueue} and \texttt{onPostAppend()} is called (lines 1485 and 1486), which checks if the read buffer is full and suspends the current I/O thread (not the dispatcher thread) if the read buffer is full. In short, the sequence of calls starting with the \texttt{onData()} call of the \texttt{IoHandlerCallback} handles the sequence of asynchronous reads until the entire request has been read.
+
+Then, we return to the \texttt{IoSocketHandler} which then calls its \texttt{IoHandlerCallback}'s \texttt{onPostData()} method on line 297 of IoSocketHandler.java. This method simply calls the \texttt{onPostData()} method of \texttt{NonBlockingConnection}, which obtains the \texttt{HandlerAdapter} containing \texttt{EchoHandler} atomically and calls the \texttt{HandlerAdapter}'s \texttt{onData()} method (NonBlockingConnection.java line 1316). This method is defined on line 164 of HandlerAdapter.java. This method eventually calls \texttt{performOnData()}, which is defined on line 221. Finally, \texttt{performOnData()} calls \texttt{EchoHandler}'s \texttt{onData()} method. This completes our trace.
 
 \subsection{Idle timeout}
+
+A client-server connection is represented by a \texttt{NonBlockingConnection} object. In the \texttt{init()} method of the inner class \texttt{Server.LifeCycleHandler} (Server.java line 1184), the \texttt{setIdleTimeoutMillis()} method (line 1194) and the \texttt{setConnectionTimeoutMillis()} methods (line 1195) of \texttt{NonBlockingConnection} are called to set the idle and connection timeout times. Both methods are methods of the \texttt{IConnection} interface, which is used to represent an end-to-end connection or session that contains the backing socket channel.
+
+The \texttt{NonBlockingConnection} class also provides the method \texttt{checkIdleTimeout()} (line 1401) and \texttt{checkConnectionTimeout()} (line 1427) that check whether the an idle timeout or a connection timeout has occurred.
+
+The actual timeout checking is done by a \texttt{WachdogTask}, a private inner class of \texttt{ConnectionManager} (ConnectionManager.java line 237). This class extends \texttt{TimerTask} and is scheduled to be run at regular time intervals by a timer. Every time the \texttt{WachdogTask} is run, it calls \texttt{check()} (defined ConnectionManger.java line 257) which iterates through each \texttt{NonBlockingConnection} and calls the two aforementioned timeout checking methods (lines 294 and 299) via \texttt{checkTimeout()} (line 291).
 
 \subsection{Testing}
 
