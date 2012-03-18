@@ -171,6 +171,8 @@ Then, we return to the \texttt{IoSocketHandler} which then calls its \texttt{IoH
 
 \subsection{Idle timeout}
 
+The xsocket framework tests for two kinds of timeout: connection and idle timeout. Idle timeout occurs when no data is received for a certain amount of time defined by the idle timeout time whereas the connection timeout is the timeout time for the entire lifetime of the connection.
+
 A client-server connection is represented by a \texttt{NonBlockingConnection} object. In the \texttt{init()} method of the inner class \texttt{Server.LifeCycleHandler} (Server.java line 1184), the \texttt{setIdleTimeoutMillis()} method (line 1194) and the \texttt{setConnectionTimeoutMillis()} methods (line 1195) of \texttt{NonBlockingConnection} are called to set the idle and connection timeout times. Both methods are methods of the \texttt{IConnection} interface, which is used to represent an end-to-end connection or session that contains the backing socket channel.
 
 The \texttt{NonBlockingConnection} class also provides the method \texttt{checkIdleTimeout()} (line 1401) and \texttt{checkConnectionTimeout()} (line 1427) that check whether the an idle timeout or a connection timeout has occurred.
@@ -178,5 +180,13 @@ The \texttt{NonBlockingConnection} class also provides the method \texttt{checkI
 The actual timeout checking is done by a \texttt{WachdogTask}, a private inner class of \texttt{ConnectionManager} (ConnectionManager.java line 237). This class extends \texttt{TimerTask} and is scheduled to be run at regular time intervals by a timer. Every time the \texttt{WachdogTask} is run, it calls \texttt{check()} (defined ConnectionManger.java line 257) which iterates through each \texttt{NonBlockingConnection} and calls the two aforementioned timeout checking methods (lines 294 and 299) via \texttt{checkTimeout()} (line 291).
 
 \subsection{Testing}
+
+Testing for xsocket is usually by done by instantiating a server object and executing client side code that connects with the server through a local socket and having the client code assert certain expected output from the server. In the \texttt{EchoServerTest}, the test code creates a \texttt{EchoServer} object, opens a local socket to the server, writes to it, and asserts if the same message is echoed back. This is possible because the server runs in separate threads. The second test \texttt{testXSocketBothSide} similarly sends the server requests and tests whether the response received is as expected, but it executes that code in a separate thread that simulates the client.
+
+A way to test our server with idle timeout would be similar to the way that the xsocket \texttt{TimeoutTest} performs testing. Since our server does not implement connection timeout, we can simply assume that as long as data is being received, the connection will remain open. Let our timeout time be $t$ seconds. With proper adjustments to our server code, our test program can instantiate a server, then open a socket to the server and simply sleep for $t + 1$ seconds then wakeup and check that the server has timeout and closed the connection.
+
+\section{Performance testing}
+
+
 
 \end{document}
