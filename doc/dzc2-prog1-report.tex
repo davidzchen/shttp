@@ -185,7 +185,7 @@ Testing for xsocket is usually by done by instantiating a server object and exec
 
 A way to test our server with idle timeout would be similar to the way that the xsocket \texttt{TimeoutTest} performs testing. Since our server does not implement connection timeout, we can simply assume that as long as data is being received, the connection will remain open. Let our timeout time be $t$ seconds. With proper adjustments to our server code, our test program can instantiate a server, then open a socket to the server and simply sleep for $t + 1$ seconds then wakeup and check that the server has timeout and closed the connection.
 
-\section{Performance testing}
+\section{Performance benchmarking}
 
 
 

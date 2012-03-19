@@ -2,6 +2,7 @@ import java.util.HashMap;
 import java.util.Vector;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.nio.channels.SelectionKey;
 
 public class IdleTimer implements Runnable {
@@ -60,20 +61,20 @@ public class IdleTimer implements Runnable {
 				_cancelRequests.clear();
 			}
 
-			synchronized (_idleTimers) {
-				for (Map.Entry<SelectionKey, Long> entry 
-					: _idleTimers.entrySet()) { /* XXX Here */
-					SelectionKey key = entry.getKey();
-					long endTime = entry.getValue();
-					long currTime = System.currentTimeMillis();
+			Set<Map.Entry<SelectionKey, Long>> entries = 
+				_idleTimers.entrySet();
 
-					if (currTime > endTime) {
-						Debug.WARN(" ~~ Attempt to close channel for key: " + 
-							key);
-						_dispatcher.invokeLater(new IdleTimerTask(_dispatcher, 
-							key));
-						_idleTimers.remove(key);
-					}
+			for (Map.Entry<SelectionKey, Long> entry : entries) {
+				SelectionKey key = entry.getKey();
+				long endTime = entry.getValue();
+				long currTime = System.currentTimeMillis();
+
+				if (currTime > endTime) {
+					Debug.WARN(" ~~ Attempt to close channel for key: " + 
+						key);
+					_dispatcher.invokeLater(new IdleTimerTask(_dispatcher, 
+						key));
+					_idleTimers.remove(key);
 				}
 			}
 		}
