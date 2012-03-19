@@ -11,6 +11,7 @@ public class SHTTPTestClient extends Thread {
 	public static int _time;
 	public static String[] _files;
 	public static long _clientEndTime;
+	public static boolean _test;
 
 	public static SHTTPTestClientStats _clientStats;
 
@@ -127,7 +128,7 @@ runloop:
 
 	private static void _parseOptions(String[] args)
 	{
-		if (args.length != 10) {
+		if (args.length < 10) {
 			_usage();
 			System.exit(1);
 		}
@@ -137,6 +138,8 @@ runloop:
 				_usage();
 				System.exit(1);
 			}
+
+			_test = false;
 
 			if (args[i].equals("-server")) {
 				_server = args[i+1];
@@ -148,6 +151,9 @@ runloop:
 				_filename = args[i+1];
 			} else if (args[i].equals("-T")) {
 				_time = Integer.parseInt(args[i+1]);
+			} else if (args[i].equals("-test")) {
+				if (Integer.parseInt(args[i+1]) == 1)
+					_test = true;
 			} else {
 				System.err.println("Invalid option: " + args[i] + "\n");
 				_usage();
@@ -211,15 +217,19 @@ runloop:
 			System.exit(5);
 		}
 
-		System.out.println("        Total files downloaded: " + 
-			_clientStats.getFilesDownloaded());
-		System.out.println("        Total bytes downloaded: " +
-			_clientStats.getBytesDownloaded());
-		System.out.println("Total transactional throughput: " +
-			_clientStats.getTransactionalThroughput() + " files/s");
-		System.out.println("          Data rate throughput: " +
-			_clientStats.getDataRateThroughput() + " b/s");
-		System.out.println("             Average wait time: " +
-			_clientStats.getAverageWaitTime() + " ms");
+		if (_test == false) {
+			System.out.println("        Total files downloaded: " + 
+				_clientStats.getFilesDownloaded());
+			System.out.println("        Total bytes downloaded: " +
+				_clientStats.getBytesDownloaded());
+			System.out.println("Total transactional throughput: " +
+				_clientStats.getTransactionalThroughput() + " files/s");
+			System.out.println("          Data rate throughput: " +
+				_clientStats.getDataRateThroughput() + " b/s");
+			System.out.println("             Average wait time: " +
+				_clientStats.getAverageWaitTime() + " ms");
+		} else {
+			System.out.println(_clientStats.getTransactionalThroughput());
+		}
 	}
 }
