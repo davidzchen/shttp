@@ -186,11 +186,13 @@ The actual timeout checking is done by a \texttt{WachdogTask}, a private inner c
 
 Testing for xsocket is usually by done by instantiating a server object and executing client side code that connects with the server through a local socket and having the client code assert certain expected output from the server. In the \texttt{EchoServerTest}, the test code creates a \texttt{EchoServer} object, opens a local socket to the server, writes to it, and asserts if the same message is echoed back. This is possible because the server runs in separate threads. The second test \texttt{testXSocketBothSide} similarly sends the server requests and tests whether the response received is as expected, but it executes that code in a separate thread that simulates the client.
 
-A way to test our server with idle timeout would be similar to the way that the xsocket \texttt{TimeoutTest} performs testing. Since our server does not implement connection timeout, we can simply assume that as long as data is being received, the connection will remain open. Let our timeout time be $t$ seconds. With proper adjustments to our server code, our test program can instantiate a server, then open a socket to the server and simply sleep for $t + 1$ seconds then wakeup and check that the server has timeout and closed the connection.
+A way to test our server with idle timeout would be similar to the way that the xsocket \texttt{TimeoutTest} performs testing. The \texttt{TimeoutTest} tests both idle and connection timeouts by setting a timeout on the server, opening a connection from the client, and then stalling for a certain amount of time that would cause the server to timeout. To test for a specific timeout event, such as an idle timeout and not a connection timeout, it sets the connection timeout to a $t_c$ and the idle timeout to a $t_i$ such that $t_c > t_i$, open a connection, and have the client send an imcomplete request and sleep for a time $t$ such that $t_i < t < t_c$ and then check that the idle timeout event was triggered but the connection timeout has not.
+
+Since our server does not implement connection timeout, we can simply assume that as long as data is being received, the connection will remain open. Let our timeout time be $t$ seconds. With proper adjustments to our server code, our test program can instantiate a server, then open a socket to the server and simply sleep for $t + 1$ seconds then wake up and check that the server has timeout and closed the connection.
 
 \section{Performance benchmarking}
 
-A set of test files and request pattern files were generated with the scripts provided in gen.tar. The same request pattern was used for all of the servers. Each server was tested on a separate zoo machine, and the zoo Apache server was benchmarked per the instructions on the assignment page. Transactional throughput in files per second was recorded for each benchmark. The results of the benchmark were graphed and are shown in Figure 1.
+A set of test files and request pattern files were generated with the scripts provided in gen.tar. The same request pattern was used for all of the servers. Each server was tested on a separate zoo machine, and the zoo Apache server was benchmarked per the instructions on the assignment page. The thread pool servers were each tested with a small thread pool of 4 threads and a large thread pool of 24 threads. Transactional throughput in files per second was recorded for each benchmark. The results of the benchmark were graphed and are shown in Figure 1.
 
 \begin{figure}[t]
 	\centering
@@ -198,6 +200,16 @@ A set of test files and request pattern files were generated with the scripts pr
 	\caption{Performance benchmarks with transactional throughput on the $y$ axis and number of simultaneous users (threads) on the $x$ axis.}
 \end{figure}
 
-Clearly, the asynchronous server outperforms the sequential and all of the threaded servers, though it is slightly outperformed by the more highly-optimized Apache.
+As expected, the sequential server performs the worst. With a large number of simultaneous users, it becomes overwhelmed. The per-request server performs the best out of the threaded servers initially. However, at a certain point, the thread overhead begins to overtake the performance increase. 
+
+Clearly, the asynchronous server greatly outperforms the sequential and all of the threaded servers by serveral orders of magnitude, though it is slightly outperformed by the more highly-optimized Apache. Although the event driven architecure is much more complex than the synchronous multithreaded ones, the improvement in performance is dramatic. 
+
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=1.0\textwidth]{doc/benchmarks_threaded_fig.pdf}
+	\caption{Performance benchmarks in detail showing only the thread pool, per-request, and sequential servers.}
+\end{figure}
+
+For clarity, the graphs of the performance of threaded and sequential servers is shown in detail in Figure 2. For each of the thread pool servers, running with a large thread pool indeed increases throughput to a certain extent. However, this performance increase is nominal compared to the performance increase given by using asynchronous I/O. Furthermore, it is likely that at a certain point, the thread overhead will begin to overtake any performance advantage of a larger thread pool. 
 
 \end{document}
