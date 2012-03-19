@@ -11,18 +11,18 @@ public class Acceptor implements IAcceptHandler {
 	private ISocketReadWriteHandlerFactory _srwf;
 	private ServerCache _serverCache;
 	private String _documentRoot;
-	private IdleTimer _idleTimer;
+	private IdleTimeoutTimer _idleTimeoutTimer;
 
 	public Acceptor(ServerSocketChannel server, Dispatcher dispatcher,
 		ISocketReadWriteHandlerFactory srwf, ServerCache serverCache, 
-		String documentRoot, IdleTimer idleTimer)
+		String documentRoot, IdleTimeoutTimer idleTimeoutTimer)
 	{
 		_dispatcher   = dispatcher;
 		_server       = server;
 		_srwf         = srwf;
 		_serverCache  = serverCache;
 		_documentRoot = documentRoot;
-		_idleTimer    = idleTimer;
+		_idleTimeoutTimer    = idleTimeoutTimer;
 	}
 
 	public void handleException()
@@ -39,12 +39,12 @@ public class Acceptor implements IAcceptHandler {
 		client.configureBlocking(false);
 
 		IReadWriteHandler rwH = _srwf.createHandler(_dispatcher, client,
-			_serverCache, _documentRoot, _idleTimer);
+			_serverCache, _documentRoot, _idleTimeoutTimer);
 		int ops = rwH.getInitOps();
 
 		SelectionKey clientKey = _dispatcher.registerNewSelection(client,
 			rwH, ops);
-		_idleTimer.registerIdleTimer(clientKey);
+		_idleTimeoutTimer.registerIdleTimer(clientKey);
 		_dispatcher.incrLoad();
 	}
 }

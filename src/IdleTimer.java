@@ -1,82 +1,31 @@
-import java.util.HashMap;
-import java.util.Vector;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.nio.channels.SelectionKey;
 
-public class IdleTimer implements Runnable {
 
-	private long _incompleteTimeout;
+public class IdleTimer {
 
-	private Dispatcher _dispatcher;
-	private HashMap<SelectionKey, Long> _idleTimers;
-	private List<SelectionKey> _cancelRequests;
-	private List<SelectionKey> _addRequests;
+	public static final int TIMER_ACTIVE = 1;
+	public static final int TIMER_INACTIVE = 0;
 
-	public IdleTimer(Dispatcher dispatcher, int incompleteTimeout)
+	private long _endTime;
+	private int _status;
+
+	public IdleTimer(long endTime)
 	{
-		_dispatcher = dispatcher;
-		_idleTimers = new HashMap<SelectionKey, Long>();
-		_cancelRequests = new Vector<SelectionKey>();
-		_addRequests = new Vector<SelectionKey>();
-		_incompleteTimeout = incompleteTimeout;
+		_endTime = endTime;
+		_status = TIMER_ACTIVE;
 	}
 
-	public void registerIdleTimer(SelectionKey key)
+	public void setInactive()
 	{
-		Debug.WARN(" ~~ Register idle timer for key: " + key);
-		synchronized (_addRequests) {
-			_addRequests.add(key);
-		}
+		_status = TIMER_INACTIVE;
 	}
 
-	public void cancelIdleTimer(SelectionKey key)
+	public boolean isActive()
 	{
-		Debug.WARN(" ~~ Cancel idle timer for key: " + key);
-		synchronized (_cancelRequests) {
-			_cancelRequests.add(key);
-		}
+		return (_status == TIMER_ACTIVE);
 	}
 
-	public void run()
+	public long getEndTime()
 	{
-		while (true) {
-			synchronized (_addRequests) {
-				for (int i = 0; i < _addRequests.size(); i++) {
-					SelectionKey k = _addRequests.get(i);
-					long endTime = System.currentTimeMillis() + 
-						_incompleteTimeout;
-					_idleTimers.put(k, endTime);
-				}
-				_addRequests.clear();
-			}
-
-			synchronized (_cancelRequests) {
-				for (int i = 0; i < _cancelRequests.size(); i++) {
-					SelectionKey k = _cancelRequests.get(i);
-					if (_idleTimers.containsKey(k))
-						_idleTimers.remove(k);
-				}
-				_cancelRequests.clear();
-			}
-
-			Set<Map.Entry<SelectionKey, Long>> entries = 
-				_idleTimers.entrySet();
-
-			for (Map.Entry<SelectionKey, Long> entry : entries) {
-				SelectionKey key = entry.getKey();
-				long endTime = entry.getValue();
-				long currTime = System.currentTimeMillis();
-
-				if (currTime > endTime) {
-					Debug.WARN(" ~~ Attempt to close channel for key: " + 
-						key);
-					_dispatcher.invokeLater(new IdleTimerTask(_dispatcher, 
-						key));
-					_idleTimers.remove(key);
-				}
-			}
-		}
+		return _endTime;
 	}
 }

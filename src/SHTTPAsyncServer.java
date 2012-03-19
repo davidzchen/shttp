@@ -73,14 +73,15 @@ public class SHTTPAsyncServer {
 		}
 
 		/* Create idle timer object. */
-		IdleTimer idleTimer = new IdleTimer(dispatcher, 
+		IdleTimeoutTimer idleTimeoutTimer = new IdleTimeoutTimer(dispatcher, 
 			config.incompleteTimeout());
 
 		/* Create server acceptor for SHTTP ReadWrite Handler. */
 		ISocketReadWriteHandlerFactory shttpFactory =
 			new SHTTPReadWriteHandlerFactory();
 		Acceptor acceptor = new Acceptor(socketChannel, dispatcher, 
-			shttpFactory, serverCache, config.documentRoot(), idleTimer);
+			shttpFactory, serverCache, config.documentRoot(), 
+			idleTimeoutTimer);
 
 		Thread dispatcherThread;
 		Thread idleTimerThread;
@@ -93,7 +94,7 @@ public class SHTTPAsyncServer {
 			dispatcherThread = new Thread(dispatcher);
 			dispatcherThread.start();
 
-			idleTimerThread = new Thread(idleTimer);
+			idleTimerThread = new Thread(idleTimeoutTimer);
 			idleTimerThread.start();
 
 			/* Ugly-ass hack for invokeAndWait() */

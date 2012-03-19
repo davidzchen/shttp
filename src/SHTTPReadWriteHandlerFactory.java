@@ -4,9 +4,10 @@ public class SHTTPReadWriteHandlerFactory
 	implements ISocketReadWriteHandlerFactory {
 
 	public IReadWriteHandler createHandler(Dispatcher d, SocketChannel client,
-		ServerCache serverCache, String documentRoot, IdleTimer idleTimer)
+		ServerCache serverCache, String documentRoot, 
+		IdleTimeoutTimer idleTimeoutTimer)
 	{
 		return new SHTTPReadWriteHandler(d, client, serverCache,
-			documentRoot, idleTimer);
+			documentRoot, idleTimeoutTimer);
 	}
 }
