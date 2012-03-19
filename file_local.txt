@@ -1,3 +1,0 @@
-/www/
-/www/index.html
-/www/index_m.html

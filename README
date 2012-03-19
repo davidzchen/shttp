@@ -7,10 +7,13 @@ I have excluded the generated test files since the request pattern generated
 each time follow the same distribution. The files and directory tree are as
 follows:
 
-	/src			Contains the Java source code for my solution
+	/src			Java source code for my solution
+	/src/www		A test web-root
 	/test			Contains test scripts I used for benchmarking
 	README			This file
 	dzc2-prog1-report.pdf	My report
+	file.txt		A test list of files
+	shttp.conf		An example server configuration file
 	Makefile		Make file used for building
 
 To build my solution simply run:
