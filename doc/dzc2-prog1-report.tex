@@ -88,7 +88,7 @@ The way that the dispatcher pool shares the workload may be seen in the \texttt{
 
 As described above, a dispatcher thread is represented by the \texttt{IoSocketDispatcher} class. Its constructor is defined in IoSocketDispatcher.java line 106-127. The constructor is passed a memory manager object and a string name. It then opens a \texttt{Selector}. \texttt{IoSocketDispatcher} is \texttt{Runnable}. The \texttt{run()} method of the dispatcher is as follows:
 
-\begin{lstlisting}[label=dispatcherLoop,caption=Main loop of dispatcher]
+\begin{lstlisting}[label=dispatcherLoop,caption=Main loop of dispatcher,firstnumber=208]
     public void run() {
         
         // set thread name and attach dispatcher id to thread
@@ -103,7 +103,7 @@ As described above, a dispatcher thread is represented by the \texttt{IoSocketDi
 
         int handledTasks = 0;
 
-        while (isOpen.get()) {
+        while(isOpen.get()) {
             try {
                 int eventCount = selector.select(5000);
 
@@ -117,13 +117,16 @@ As described above, a dispatcher thread is represented by the \texttt{IoSocketDi
                 handledTasks += performDeregisterHandlerTasks();
 
                 checkForLoooping(eventCount + handledTasks, lastTimeWokeUp);
+
             } catch (Throwable e) {
                 // eat and log exception
                 if (LOG.isLoggable(Level.FINE)) {
                     LOG.fine("[" + Thread.currentThread().getName() + "] exception occurred while processing. Reason " + DataConverter.toString(e));
                 }
+            }
         }
         
+
         for (IoSocketHandler socketHandler : getRegistered()) {
             socketHandler.onDeregisterEvent();
         }
@@ -187,6 +190,14 @@ A way to test our server with idle timeout would be similar to the way that the 
 
 \section{Performance benchmarking}
 
+A set of test files and request pattern files were generated with the scripts provided in gen.tar. The same request pattern was used for all of the servers. Each server was tested on a separate zoo machine, and the zoo Apache server was benchmarked per the instructions on the assignment page. Transactional throughput in files per second was recorded for each benchmark. The results of the benchmark were graphed and are shown in Figure 1.
 
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=1.0\textwidth]{doc/benchmarks_fig.pdf}
+	\caption{Performance benchmarks with transactional throughput on the $y$ axis and number of simultaneous users (threads) on the $x$ axis.}
+\end{figure}
+
+Clearly, the asynchronous server outperforms the sequential and all of the threaded servers, though it is slightly outperformed by the more highly-optimized Apache.
 
 \end{document}

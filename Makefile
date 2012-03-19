@@ -34,4 +34,4 @@ dclean:
 	rm -rf $(TEX_OBJ)
 
 jar:
-	jar cvf shttp-0.1.jar src/*.java shttp.conf
+	jar cvf dzc-shttp-0.1.jar src/*.java Makefile dzc2-prog1-report.pdf shttp.conf test/benchmark* test/*.conf README

@@ -1,0 +1,20 @@
+# CPSC 433 Programming Assignment 1
+# 
+# David Z. Chen
+
+The JAR file you just unzipped contains my solution, test scripts, and report.
+I have excluded the generated test files since the request pattern generated
+each time follow the same distribution. The files and directory tree are as
+follows:
+
+	/src			Contains the Java source code for my solution
+	/test			Contains test scripts I used for benchmarking
+	README			This file
+	dzc2-prog1-report.pdf	My report
+	Makefile		Make file used for building
+
+To build my solution simply run:
+
+	make
+
+The Java class files will be found in the src directory.
